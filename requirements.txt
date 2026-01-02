@@ -1,0 +1,15 @@
+# MIRAI Virtual Try-On Mirror - Python Dependencies
+# Install all dependencies with: pip install -r requirements.txt
+
+# Core AI/ML Libraries
+gradio-client==1.5.0
+mediapipe==0.10.31
+opencv-python>=4.8.0
+pandas>=2.0.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# Optional: For local VITON-HD model (uncomment if needed)
+# torch>=2.0.0
+# torchvision>=0.15.0
+# scipy>=1.10.0

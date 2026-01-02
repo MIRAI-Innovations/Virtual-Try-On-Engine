@@ -1,0 +1,287 @@
+MIRAI Virtual Try-On Mirror - Project Documentation Index
+================================================================
+
+This file contains a comprehensive list of all documentation and key files in this repository.
+
+## Core Documentation Files
+------------------------------
+
+1. README.md
+   - Primary user-facing documentation
+   - Installation guide
+   - Usage instructions
+   - Quick start guide
+   - API documentation
+   - Troubleshooting tips
+
+2. TECHNICAL_DOCUMENTATION.md
+   - In-depth technical documentation
+   - System architecture details
+   - Library dependencies analysis
+   - Patent and IP analysis
+   - Code structure breakdown
+   - Innovation highlights
+
+3. documents.txt (this file)
+   - Index of all project documentation
+   - File structure reference
+
+
+## Main Application Files
+---------------------------
+
+1. run_trial.py (391 lines)
+   - Primary application script
+   - Automated virtual try-on trial runner
+   - MediaPipe feature extraction
+   - Session-based data logging
+   - Multi-provider API failover
+   - Command-line interface
+
+2. run_vton_api.py (162 lines)
+   - Multi-task VTON API client
+   - Batch processing capabilities
+   - Space configuration management
+   - Provider-specific adapters
+
+3. run_demo_robust.py (113 lines)
+   - Local VITON-HD model wrapper
+   - Preprocessing automation
+   - Error handling for local inference
+
+
+## VITON-HD Model Directory
+------------------------------
+
+Located in: ./VITON-HD/
+
+Key files:
+- test.py - Model inference script
+- preprocess.py - Image preprocessing pipeline
+- networks.py - Neural network architectures
+- datasets.py - Dataset loading utilities
+- utils.py - Helper functions
+- run_demo.py - Local demo script
+- run_demo_robust.py - Robust demo wrapper
+
+
+## Dataset Structure
+----------------------
+
+Located in: ./datasets/
+
+Structure:
+- test/
+  - cloth/ - Garment images for try-on
+  - image/ - Subject/person images
+  - openpose_json/ - Pose keypoint data
+  - image-parse/ - Segmentation maps
+
+
+## User Uploaded Images
+-------------------------
+
+Located in: ./my photos/
+
+Contains:
+- User-provided subject images
+- Example: IMG_1337.jpg, IMG_1522.jpg
+
+
+## Trial Output Folders
+-------------------------
+
+Generated folders: Trial 1/, Trial 2/, Trial 3/, etc.
+
+Each trial folder contains:
+- result.jpg - Generated try-on image
+- trial_data.csv - Session metadata with 12 attributes
+  * Manual inputs: Height, Age, Gender, Style Preference
+  * Automated features: Body Shape, Face Shape, Skin Tone
+  * Derived parameters: Age Group, Arm Preference
+  * File references: Subject, Cloth, Result paths
+
+
+## Configuration Files
+------------------------
+
+1. requirements.txt (if present)
+   - Python package dependencies
+   - Version specifications
+
+2. .gitignore (recommended)
+   - Files to exclude from version control
+   - Typically: __pycache__/, *.pyc, Trial */
+
+
+## Key Technologies Used
+--------------------------
+
+1. MediaPipe (v0.10.31)
+   - Pose estimation (33 landmarks)
+   - Face mesh detection (468 landmarks)
+   - Skin tone analysis
+
+2. Gradio Client (v1.5.0)
+   - Hugging Face Spaces API integration
+   - File upload handling
+   - Multi-provider failover
+
+3. OpenCV (cv2)
+   - Image I/O operations
+   - Color space conversion
+   - ROI extraction
+
+4. Pandas (v2.x)
+   - CSV data logging
+   - Session metadata management
+
+5. PyTorch (in VITON-HD)
+   - Neural network inference
+   - GPU acceleration
+
+
+## API Providers
+------------------
+
+Primary:
+- yisol/IDM-VTON (Hugging Face Space)
+
+Backups:
+- Nymbo/Virtual-Try-On
+- levihsu/OOTDiffusion
+- zhengchong/CatVTON
+
+
+## Feature Extraction Details
+--------------------------------
+
+Automated Features (MediaPipe-based):
+
+1. Body Shape Classification
+   - Method: Shoulder-to-hip ratio analysis
+   - Categories: "Inverted Triangle", "Hourglass", "Rectangle"
+   - Processing time: <100ms
+
+2. Face Shape Classification
+   - Method: Face width-to-height ratio
+   - Categories: "Oval", "Round", "Square"
+   - Landmarks used: 468 face mesh points
+
+3. Skin Tone Detection
+   - Method: RGB intensity averaging on cheek ROI
+   - Categories: "Fair", "Medium", "Dark"
+   - Thresholds: Fair >170, Medium 100-170, Dark <100
+
+
+## Data Collection Schema
+----------------------------
+
+CSV Format (trial_data.csv):
+- Height (cm)
+- Age (years)
+- Gender (Male/Female)
+- Style Preference (Casual/Formal/etc.)
+- Body Shape (automated)
+- Face Shape (automated)
+- Skin Tone (automated)
+- Age Group (derived: Teen/Adult/Mature)
+- Arm Preference (derived: Cover/Any)
+- Subject File (image path)
+- Cloth File (image path)
+- Result File (output path)
+
+
+## Command-Line Usage
+-----------------------
+
+Basic:
+  python run_trial.py
+
+Advanced:
+  python run_trial.py --subject path/to/image.jpg --cloth_dir path/to/clothes/
+
+API Client:
+  python run_vton_api.py
+
+
+## System Requirements
+------------------------
+
+- Python 3.8 or higher
+- Internet connection (for API calls)
+- Minimum 4GB RAM recommended
+- GPU optional (only for local VITON-HD)
+
+
+## Installation Steps
+-----------------------
+
+1. Clone repository:
+   git clone https://github.com/StillDuxk/Mirai_tryon_Mirror.git
+
+2. Navigate to directory:
+   cd Mirai_tryon_Mirror
+
+3. Install dependencies:
+   pip install gradio-client==1.5.0 mediapipe==0.10.31 opencv-python pandas numpy Pillow
+
+4. Run trial:
+   python run_trial.py
+
+
+## Troubleshooting Reference
+------------------------------
+
+Common Issues:
+1. SSL Connection Errors → Automatic retry (3x per provider)
+2. MediaPipe Import Errors → pip install mediapipe==0.10.31
+3. No Cloth Images Found → Check datasets/test/cloth/ directory
+4. Gradio Client Timeout → System switches to backup provider
+
+
+## License and Attribution
+----------------------------
+
+- License: MIT (see LICENSE file)
+- VITON-HD: Original virtual try-on architecture
+- IDM-VTON: State-of-the-art diffusion model
+- MediaPipe: Google's computer vision framework
+- Hugging Face: Gradio Spaces hosting
+
+
+## Contact and Support
+------------------------
+
+Repository: https://github.com/StillDuxk/Mirai_tryon_Mirror
+Issues: https://github.com/StillDuxk/Mirai_tryon_Mirror/issues
+Maintainer: MIRAI Development Team
+
+
+## Version History
+--------------------
+
+v1.0 (January 2026)
+- Initial release
+- Multi-provider failover system
+- Automated feature extraction with MediaPipe
+- Session-based data logging
+- CLI interface
+
+
+## Future Enhancements
+------------------------
+
+Planned features:
+- Real-time camera integration
+- Multispectral imaging support
+- Custom-trained VTON model
+- Web-based user interface
+- Advanced recommendation engine
+
+
+================================================================
+Document created: January 2, 2026
+Last updated: January 2, 2026
+Confidentiality: Public
+================================================================

@@ -1,0 +1,43 @@
+# MIRAI Virtual Try-On Mirror
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+**/venv/
+**/env/
+**/ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Trial outputs (optional - uncomment if you don't want to track trial results)
+Trial */
+final_output.jpg
+test_output_*.jpg
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Large datasets (optional - uncomment to exclude datasets from repo)
+datasets/
+my photos/
+
+# Model checkpoints
+*.pth
+*.pt
+*.ckpt
+
+# Logs
+*.log

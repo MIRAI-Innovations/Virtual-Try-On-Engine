@@ -1,56 +1,55 @@
-# GitHub Migration Manual
+# GitHub Migration Manual (Fixed)
 
-Follow these exact steps to push your current workspace to your existing GitHub repository on a new branch.
+**IMPORTANT:** You previously pushed `venv` (libraries) and some large files. We need to clean this up so your friends can download it easily without errors.
 
-### Prerequisites
--   Open your terminal (Git Bash or PowerShell) in this folder: `C:\Users\dhaks\OneDrive\Documents\MIRAI\model`
--   Make sure you have your GitHub Repo URL ready (e.g., `https://github.com/YourName/YourRepo.git`)
+### The Problem
+-   **`venv` folder:** Should NOT be on GitHub. Your friends will generate their own using `REQUIREMENTS_GUIDE.md`.
+-   **Large Datasets:** Use Google Drive or OneDrive for the 3GB training data. GitHub has a strict 100MB limit per file.
 
-### Step 1: Initialize Git
-If you haven't already initialized git:
+---
+
+### Step 1: Clean Up Git Tracking (Undo the mess)
+Run these commands to stop tracking the large files and the venv folder.
 ```bash
-git init
-```
+# 1. Stop tracking files (does not delete them from your disk)
+git rm -r --cached .
 
-### Step 2: Add Remote
-Link your local folder to the remote repository. Replace `YOUR_REPO_URL` with your actual URL.
-```bash
-git remote add origin YOUR_REPO_URL
-```
-*Note: If it says "remote origin already exists", skip this step.*
-
-### Step 3: Create .gitignore (Crucial for Cleanliness)
-Before adding files, run this command to prevent the `archive` folder and other junk from being pushed.
-```bash
-echo "archive/" >> .gitignore
+# 2. Update .gitignore to strictly exclude large items
+echo "venv/" > .gitignore
+echo "venv_310/" >> .gitignore
+echo ".env" >> .gitignore
 echo "__pycache__/" >> .gitignore
-echo "venv/" >> .gitignore
-echo "*.jpg" >> .gitignore
-```
-*Note: We ignore `*.jpg` generally to avoid pushing large test images, but you can remove that line if you want to keep them.*
-
-### Step 4: Create & Switch to New Branch
-Crucial Step: This creates a separate branch named `feature/unified-vton` so we don't touch the existing `main` code.
-```bash
-git checkout -b feature/unified-vton
+echo "archive/" >> .gitignore
+echo "*.zip" >> .gitignore
+echo "datasets/train/" >> .gitignore
+echo "Mirror_Sessions/" >> .gitignore
 ```
 
-### Step 5: Add Files
-Stage all your files for the commit.
+### Step 2: Re-Add Only Necessary Files
+Now we re-add everything, but `git` will respect the new ignore rules.
 ```bash
 git add .
 ```
 
-### Step 6: Commit
-Save your changes locally.
+### Step 3: Commit the Clean Version
 ```bash
-git commit -m "Refactor: Unified VTON system with multi-model fallback"
+git commit -m "Fix: Remove venv and large datasets from git tracking"
 ```
 
-### Step 7: Push
-Upload the new branch to GitHub.
+### Step 4: Force Push
+Since we are fixing the history on your new branch.
 ```bash
-git push -u origin feature/unified-vton
+git push -u origin feature/unified-vton --force
 ```
 
-**Success!** You can now check GitHub to see your new branch.
+---
+
+## How specific files are handled
+
+1.  **Dependencies (Libraries)**:
+    -   Your friends will NOT download your `venv`.
+    -   They will simply run: `pip install -r requirements.txt` (or follow the guide).
+    
+2.  **Datasets**:
+    -   **`datasets/test`**: I have kept this included (as it's around 500MB, which is acceptable if no single file is >100MB). This allows them to run demos immediately.
+    -   **`datasets/train` & `Zip files`**: These are ignored. You should upload the `Virtual tryon data.zip` to Google Drive/OneDrive and share the link in the `README.md` if they strictly need to re-train models.

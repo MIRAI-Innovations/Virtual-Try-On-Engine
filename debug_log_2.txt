@@ -1,0 +1,16 @@
+=== Starting MIRAI Trial Runner ===
+Subject: C:\Users\dhaks\OneDrive\Documents\MIRAI\model\my photos\IMG_1337.jpg
+Selected Cloth: 09710_00.jpg
+
+--- Running Feature Scanner ---
+Warning: mediapipe.solutions not found. Feature extraction disabled.
+Detected Features: {'Body Shape': 'Unknown', 'Face Shape': 'Unknown', 'Skin Tone': 'Unknown'}
+
+--- Running Virtual Try-On ---
+Trying to connect to levihsu/OOTDiffusion...
+Loaded as API: https://levihsu-ootdiffusion.hf.space
+Successfully connected to levihsu/OOTDiffusion!
+  Attempting prediction with levihsu/OOTDiffusion (ootd)...
+
+--- Saving Session ---
+Trial 6 saved successfully at C:\Users\dhaks\OneDrive\Documents\MIRAI\model\Trial 6

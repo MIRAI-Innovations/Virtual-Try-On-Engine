@@ -1,0 +1,18 @@
+=== Starting MIRAI Trial Runner ===
+Subject: my photos/test1.jpeg
+Selected Cloth: 07694_00.jpg
+
+--- Running Feature Scanner ---
+Warning: mediapipe.solutions not found. Feature extraction disabled.
+Detected Features: {'Body Shape': 'Unknown', 'Face Shape': 'Unknown', 'Skin Tone': 'Unknown'}
+
+--- Processing Image for VTON ---
+  [Smart Resize] Processed: my photos/test1.jpeg -> C:\Users\dhaks\OneDrive\Documents\MIRAI\model\temp_processed\processed_test1.jpeg ((768, 1024))
+
+--- Running Virtual Try-On ---
+Trying to connect to levihsu/OOTDiffusion...
+Loaded as API: https://levihsu-ootdiffusion.hf.space
+Successfully connected to levihsu/OOTDiffusion!
+  Attempting prediction with levihsu/OOTDiffusion (ootd)...
+  Error during prediction with levihsu/OOTDiffusion: Unlogged user is runnning out of daily ZeroGPU quotas. Signup for free on https://huggingface.co/join or login on https://huggingface.co/login to get more ZeroGPU quota now.
+VTON Failed. Aborting save.

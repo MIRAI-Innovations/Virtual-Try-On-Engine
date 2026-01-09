@@ -1,0 +1,12 @@
+Connecting to Kwai-Kolors/Kolors-Virtual-Try-On...
+Connected.
+
+--- Endpoints Inspection ---
+Fn Index 0: 0
+
+Fn Index 1: 1
+
+Fn Index 2: 2
+
+Fn Index 3: 3
+

@@ -7,7 +7,13 @@ import pandas as pd
 import cv2
 import mediapipe as mp
 import math
+import traceback
+from PIL import Image, ImageOps
 from gradio_client import Client, handle_file
+try:
+    import detect_metadata
+except ImportError:
+    detect_metadata = None
 
 # =============================================================================
 # CONFIGURATION
@@ -15,16 +21,16 @@ from gradio_client import Client, handle_file
 
 # File Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMP_DIR = os.path.join(BASE_DIR, "temp_processed")
+os.makedirs(TEMP_DIR, exist_ok=True)
+
 DEFAULT_SUBJECT_IMAGE_PATH = r"C:\Users\dhaks\OneDrive\Documents\MIRAI\model\my photos\IMG_1337.jpg"
 CLOTH_DIR = r"C:\Users\dhaks\OneDrive\Documents\MIRAI\model\datasets\test\cloth"
 
 # User Manual Inputs
-USER_INPUTS = {
-    "Height": "175 cm",
-    "Age": 22,
-    "Gender": "Male",
-    "Style Preference": "Casual" 
-}
+# User Manual Inputs (Now handled via CLI args)
+# Defaults moved to main() parser
+
 
 # VTON Space
 VTON_SPACE = "yisol/IDM-VTON"
@@ -139,6 +145,34 @@ class FeatureScanner:
                         results["Skin Tone"] = "Medium"
                     else:
                         results["Skin Tone"] = "Dark"
+
+            # 3. Fallback Skin Tone (using Pose Nose landmark) if Face Mesh failed or didn't run
+            if results["Skin Tone"] == "Unknown" and pose_results.pose_landmarks:
+                 landmarks = pose_results.pose_landmarks.landmark
+                 nose = landmarks[self.mp_pose.PoseLandmark.NOSE]
+                 
+                 # Check if nose is within image bounds
+                 if 0 <= nose.x <= 1 and 0 <= nose.y <= 1:
+                     h, w, c = image.shape
+                     cx, cy = int(nose.x * w), int(nose.y * h)
+                     
+                     roi_size = 5
+                     y1, y2 = max(0, cy-roi_size), min(h, cy+roi_size)
+                     x1, x2 = max(0, cx-roi_size), min(w, cx+roi_size)
+                     
+                     roi = image_rgb[y1:y2, x1:x2]
+                     if roi.size > 0:
+                        avg_color = roi.mean(axis=(0,1))
+                        intensity = sum(avg_color) / 3
+                        print(f"  [Debug] Fallback Skin Intensity (Nose): {intensity:.2f}")
+                        
+                        if intensity > 170:
+                            results["Skin Tone"] = "Fair"
+                        elif intensity > 100:
+                            results["Skin Tone"] = "Medium"
+                        else:
+                            results["Skin Tone"] = "Dark"
+
         except Exception as e:
             print(f"Error during feature analysis: {e}")
             
@@ -149,25 +183,26 @@ class FeatureScanner:
 # =============================================================================
 
 # VTON Spaces Configuration
+# VTON Spaces Configuration
 SPACES = [
-    {
-        "name": "yisol/IDM-VTON",
-        "type": "idm",
-        "notes": "Primary SOTA model"
-    },
     {
         "name": "levihsu/OOTDiffusion",
         "type": "ootd",
-        "notes": "Fallback, stable"
+        "notes": "Primary Working Model (Stable)"
+    },
+    {
+        "name": "yisol/IDM-VTON",
+        "type": "idm",
+        "notes": "SOTA (Currently Unstable/Quota Limit)"
     },
     {
         "name": "zhengchong/CatVTON", 
         "type": "catvton",
-        "notes": "Fast, backup"
+        "notes": "Backup"
     }
 ]
 
-def run_prediction(client, space_config, person_path, cloth_path):
+def run_prediction(client, space_config, person_path, cloth_path, category="Upper-body", steps=30, scale=2.5, seed=-1):
     space_name = space_config["name"]
     space_type = space_config["type"]
     
@@ -178,11 +213,12 @@ def run_prediction(client, space_config, person_path, cloth_path):
             return client.predict(
                 vton_img=handle_file(person_path),
                 garm_img=handle_file(cloth_path),
+                category=category, 
                 n_samples=1,
-                n_steps=20,
-                image_scale=2,
-                seed=42,
-                api_name="/process_hd" 
+                n_steps=steps,
+                image_scale=scale,
+                seed=seed,
+                api_name="/process_dc" 
             )
         
         elif space_type == "catvton":
@@ -210,60 +246,119 @@ def run_prediction(client, space_config, person_path, cloth_path):
             )
     except Exception as e:
         print(f"  Error during prediction with {space_name}: {e}")
+        print(traceback.format_exc())
         return None
     return None
 
-def run_vton_trial(person_path, cloth_path):
-    active_client = None
-    active_config = None
-
-    # 1. Connect to a working space
+def run_vton_trial(person_path, cloth_path, category="Upper-body", steps=30, scale=2.5, seed=-1, hf_token=None):
+    final_image = None
+    
+    # Iterate through spaces and try to run the FULL pipeline (Connect -> Predict)
+    # If any step fails, move to the next space.
+    
     for config in SPACES:
         name = config["name"]
-        print(f"Trying to connect to {name}...")
+        print(f"\n--- Trying {name} ---")
         
-        # Retry logic for connection
-        max_retries = 3
+        client = None
+        
+        # 1. Connect
+        max_retries = 2
         for attempt in range(max_retries):
             try:
-                client = Client(name)
-                # Simple check if api is viewable
-                # client.view_api(return_format="dict") 
-                print(f"Successfully connected to {name}!")
-                active_client = client
-                active_config = config
-                break # Break retry loop
-            except Exception as e:
-                print(f"  Attempt {attempt+1}/{max_retries} failed: {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(2) # Wait a bit before retrying
+                if hf_token:
+                    print(f"  Authenticating with token ending in ...{hf_token[-4:]}")
+                    try:
+                        client = Client(name, hf_token=hf_token)
+                    except TypeError:
+                        print("  (Warning: hf_token not supported by this gradio_client version. Connecting without token...)")
+                        client = Client(name)
                 else:
-                    print(f"  Failed to connect to {name} after {max_retries} attempts.")
-        
-        if active_client:
-            break # Break space loop if connected
-
-    if not active_client:
-        print("CRITICAL: All VTON spaces are unreachable.")
-        return None
-
-    # 2. Run Prediction
-    result = run_prediction(active_client, active_config, person_path, cloth_path)
-    
-    # 3. Handle Result
-    final_image = None
-    if isinstance(result, (list, tuple)):
-        for item in result:
-            if isinstance(item, str) and os.path.exists(item):
-                final_image = item
+                    client = Client(name)
+                print(f"  Connected to {name}!")
                 break
-            elif isinstance(item, dict) and 'image' in item:
-                final_image = item['image']
-                break
-    elif isinstance(result, str) and os.path.exists(result):
-        final_image = result
+            except Exception as e:
+                print(f"  Connection Attempt {attempt+1} failed: {e}")
+                if attempt < max_retries - 1: time.sleep(1)
+
+        if not client:
+            print(f"  Could not connect to {name}. Skipping.")
+            continue
+
+        # 2. Run Prediction with this client
+        result = run_prediction(client, config, person_path, cloth_path, category, steps, scale, seed)
         
-    return final_image
+        # 3. Handle Result
+        if result:
+            # Check if result is valid path
+            if isinstance(result, (list, tuple)):
+                for item in result:
+                    if isinstance(item, str) and os.path.exists(item):
+                        final_image = item
+                        break
+                    elif isinstance(item, dict) and 'image' in item:
+                        final_image = item['image']
+                        break
+            elif isinstance(result, str) and os.path.exists(result):
+                final_image = result
+            
+            if final_image:
+                print(f"  > Success with {name}!")
+                return final_image
+            else:
+                print(f"  > {name} returned empty result. Trying next...")
+        else:
+            print(f"  > Prediction failed with {name}. Trying next...")
+
+    print("CRITICAL: All VTON spaces failed.")
+    return None
+
+def smart_resize(image_path, target_size=(768, 1024)):
+    """
+    Resizes image to target_size while maintaining aspect ratio and adding padding (letterboxing).
+    Returns path to the temporary processed image.
+    """
+    try:
+        img = Image.open(image_path)
+        img = ImageOps.exif_transpose(img) # Fix orientation if needed
+        
+        # Calculate aspect ratios
+        target_ratio = target_size[0] / target_size[1]
+        img_ratio = img.width / img.height
+        
+        if img_ratio > target_ratio:
+            # Image is wider than target: resize by width
+            new_width = target_size[0]
+            new_height = int(new_width / img_ratio)
+        else:
+            # Image is taller than target: resize by height
+            new_height = target_size[1]
+            new_width = int(new_height * img_ratio)
+            
+        img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Create new blank image (White background 255,255,255)
+        # Black (0,0,0) can be interpreted as 'mask' or 'hair' by VTON models, causing warping.
+        new_img = Image.new("RGB", target_size, (255, 255, 255))
+        
+        # Paste centered
+        x_offset = (target_size[0] - new_width) // 2
+        y_offset = (target_size[1] - new_height) // 2
+        new_img.paste(img_resized, (x_offset, y_offset))
+        
+        # Save
+        filename = f"processed_{os.path.basename(image_path)}"
+        if not filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+            filename += ".jpg"
+            
+        save_path = os.path.join(TEMP_DIR, filename)
+        new_img.save(save_path, quality=95)
+        print(f"  [Smart Resize] Processed: {image_path} -> {save_path} ({target_size})")
+        return save_path
+        
+    except Exception as e:
+        print(f"  [Error] Smart resize failed: {e}")
+        return image_path # Fallback to original
 
 # =============================================================================
 # MAIN ORCHESTRATOR
@@ -271,8 +366,19 @@ def run_vton_trial(person_path, cloth_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Run MIRAI Virtual Try-On Trial")
-    parser.add_argument("image", nargs="?", default=DEFAULT_SUBJECT_IMAGE_PATH, help="Path to the subject image")
+    parser.add_argument("--image", default=DEFAULT_SUBJECT_IMAGE_PATH, help="Path to the subject image")
     parser.add_argument("--cloth", default=None, help="Path to specific cloth image (optional)")
+    parser.add_argument("--category", default="Upper-body", choices=["Upper-body", "Lower-body", "Dress"], help="Garment category (Upper-body, Lower-body, Dress)")
+    parser.add_argument("--steps", type=int, default=30, help="Inference steps (Quality). Default 30.")
+    parser.add_argument("--scale", type=float, default=2.5, help="Guidance scale (Adherence). Default 2.5.")
+    parser.add_argument("--seed", type=int, default=-1, help="Random seed. Default -1 (Random).")
+    parser.add_argument("--token", type=str, default="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", help="Hugging Face Token for higher quota limits.")
+    
+    # User Metadata Arguments
+    parser.add_argument("--gender", default="Female", help="User Gender (Default: Female)")
+    parser.add_argument("--age", type=int, default=25, help="User Age (Default: 25)")
+    parser.add_argument("--height", default="170 cm", help="User Height (Default: 170 cm)")
+    
     args = parser.parse_args()
 
     subject_image_path = args.image
@@ -313,8 +419,29 @@ def main():
         print(f"Feature scanning failed: {e}")
         features = {"Body Shape": "Error", "Face Shape": "Error", "Skin Tone": "Error"}
 
-    # 4. Derive Data
-    age = USER_INPUTS["Age"]
+    # 4. Derive Data & Auto-Detect (if needed)
+    detected_meta = None
+    if detect_metadata and (args.age == 25 and args.gender == "Female"): # Logic: If user didn't change defaults (naive check)
+        print("\n--- Running AI Age/Gender Detection ---")
+        detected_meta = detect_metadata.analyze_dataset(subject_image_path)
+    
+    # Priority: CLI Args > AI Detection > Defaults
+    # Since we have defaults in parser, we use them unless AI overrides and user didn't specify.
+    # Actually, better logic: If user *explicitly* set them, use them. 
+    # But argparse doesn't tell us if it was default. 
+    # Let's trust the AI if it works, otherwise use args.
+    
+    final_age = args.age
+    final_gender = args.gender
+    
+    if detected_meta:
+        print(f"  AI Detected: {detected_meta['Gender']}, Age {detected_meta['Age']}")
+        final_age = detected_meta['Age']
+        final_gender = detected_meta['Gender']
+        
+    age = final_age
+    gender = final_gender
+    
     if age < 20: 
         age_group = "Teen"
     elif age <= 50:
@@ -324,9 +451,22 @@ def main():
     
     arm_preference = "Cover" if age_group == "Mature" else "Any"
 
+    # 4.5 Pre-process (Smart Resize) for VTON
+    print("\n--- Processing Image for VTON ---")
+    processed_subject_path = smart_resize(subject_image_path)
+
     # 5. Run VTON
     print("\n--- Running Virtual Try-On ---")
-    result_path = run_vton_trial(subject_image_path, selected_cloth_path)
+    # Use the processed path for VTON!
+    result_path = run_vton_trial(
+        processed_subject_path, 
+        selected_cloth_path, 
+        category=args.category,
+        steps=args.steps,
+        scale=args.scale,
+        seed=args.seed,
+        hf_token=args.token
+    )
     
     if not result_path:
         print("VTON Failed. Aborting save.")
@@ -336,16 +476,19 @@ def main():
     print("\n--- Saving Session ---")
     
     # Find next trial number
-    existing_trials = [d for d in os.listdir(BASE_DIR) if os.path.isdir(os.path.join(BASE_DIR, d)) and d.startswith("Trial ")]
+    MIRROR_SESSIONS_DIR = os.path.join(BASE_DIR, "Mirror_Sessions")
+    os.makedirs(MIRROR_SESSIONS_DIR, exist_ok=True)
+    
+    existing_trials = [d for d in os.listdir(MIRROR_SESSIONS_DIR) if d.startswith("Trial_")]
     trial_nums = []
     for t in existing_trials:
         try:
-            trial_nums.append(int(t.split(" ")[1]))
+            trial_nums.append(int(t.replace("Trial_", "")))
         except:
             pass
     
     next_trial_num = max(trial_nums) + 1 if trial_nums else 1
-    session_dir = os.path.join(BASE_DIR, f"Trial {next_trial_num}")
+    session_dir = os.path.join(MIRROR_SESSIONS_DIR, f"Trial_{next_trial_num}")
     os.makedirs(session_dir, exist_ok=True)
     
     # Copy files
@@ -360,10 +503,10 @@ def main():
     # Create CSV Data
     session_data = {
         # User Inputs
-        "Height": USER_INPUTS["Height"],
-        "Age": USER_INPUTS["Age"],
-        "Gender": USER_INPUTS["Gender"],
-        "Style Preference": USER_INPUTS["Style Preference"],
+        "Height": args.height,
+        "Age": final_age,
+        "Gender": final_gender,
+        "Style Preference": "Casual",
         
         # Detected
         "Body Shape": features["Body Shape"],

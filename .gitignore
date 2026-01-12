@@ -1,8 +1,28 @@
-venv/
-venv_310/
-.env
-__pycache__/
-archive/
-*.zip
-datasets/train/
+# Bulky/Large Files
+datasets/
+models/
 Mirror_Sessions/
+backend/datasets/
+backend/models/
+backend/Mirror_Sessions/
+backend/temp_uploads/
+backend/temp_processed/
+backend/mirai_server.log
+backend/__pycache__/
+backend/venv_310/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Next.js
+.next/
+frontend/.next/
+
+# IDE/System
+.vscode/
+.DS_Store
+*.log
+.env
+.env.local

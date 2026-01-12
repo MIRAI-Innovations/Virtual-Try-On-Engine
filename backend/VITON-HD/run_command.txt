@@ -1,0 +1,1 @@
+py -3.10 run_demo.py --img "c:\Users\dhaks\OneDrive\Documents\MIRAI\model\my photos\IMG_1522.heic" --cloth "00858_00.jpg"

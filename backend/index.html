@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIRAI - Smart Mirror</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #00d4ff;
+            --text-main: #ffffff;
+            --text-muted: #rgba(255, 255, 255, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #050505;
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            background-image: radial-gradient(circle at 50% 10%, #1a1a1a 0%, #000000 70%);
+        }
+
+        /* --- Sidebar Controls --- */
+        .sidebar {
+            width: 350px;
+            height: 100%;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 200;
+            letter-spacing: 4px;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .logo span {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Custom File Input */
+        .file-upload {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--glass-bg);
+            overflow: hidden;
+        }
+
+        .file-upload:hover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .file-upload input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-upload i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .file-upload p {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        /* Preview inside upload box */
+        #uploadPreview {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.4;
+            pointer-events: none;
+            display: none;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-tryon {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--accent) 0%, #0072ff 100%);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 212, 255, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: auto;
+        }
+
+        .btn-tryon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-tryon:disabled {
+            background: #333;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+            color: #666;
+        }
+
+        /* --- Main Display Area --- */
+        .main-display {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .reflection-container {
+            position: relative;
+            max-width: 600px;
+            /* Mirror constraints */
+            width: 100%;
+            height: 80vh;
+            border-radius: 20px;
+            background: #111;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 8px solid #222;
+        }
+
+        .reflection-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        .reflection-container img.active {
+            opacity: 1;
+        }
+
+        /* Loader */
+        .loader-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(5px);
+        }
+
+        .loader-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            font-weight: 200;
+        }
+
+        .steps-text {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        /* Status Messages */
+        .status-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">MIRAI<span>.AI</span></div>
+
+        <div class="control-group">
+            <label>Upload Reflection</label>
+            <div class="file-upload" onclick="document.getElementById('userImage').click()">
+                <input type="file" id="userImage" accept="image/*" onchange="handleImageUpload(this)">
+                <img id="uploadPreview">
+                <div id="uploadPlaceholder">
+                    <div style="font-size: 24px; color: var(--accent); margin-bottom: 8px;">+</div>
+                    <p>Tap to Upload</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Garment ID</label>
+            <input type="text" id="garmentID" value="00035_00.jpg" placeholder="e.g. 00035_00.jpg">
+        </div>
+
+        <button class="btn-tryon" id="tryOnBtn" onclick="runVirtualTryOn()">
+            INITIATE TRY-ON
+        </button>
+    </div>
+
+    <div class="main-display">
+        <div class="reflection-container">
+            <!-- Result Image -->
+            <img id="mirrorDisplay" src="" alt="Mirror Reflection">
+
+            <!-- Loader -->
+            <div class="loader-overlay" id="loader">
+                <div class="spinner"></div>
+                <div class="loading-text">PROCESSING</div>
+                <div class="steps-text">Analyzing Body - Mapping Garment - Rendering</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusToast" class="status-toast"></div>
+
+    <script>
+        // Convert file to Base64
+        function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const preview = document.getElementById('uploadPreview');
+                    const placeholder = document.getElementById('uploadPlaceholder');
+                    const mirror = document.getElementById('mirrorDisplay');
+
+                    // Update upload box preview
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    placeholder.style.opacity = '0';
+
+                    // Also update main mirror immediately for user to see themselves
+                    mirror.src = e.target.result;
+                    mirror.classList.add('active');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('statusToast');
+            toast.textContent = msg;
+            toast.style.color = isError ? '#ff4d4d' : '#00d4ff';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 4000);
+        }
+
+        async function runVirtualTryOn() {
+            const fileInput = document.getElementById('userImage');
+            const garmentID = document.getElementById('garmentID').value;
+            const loader = document.getElementById('loader');
+            const btn = document.getElementById('tryOnBtn');
+            const mirror = document.getElementById('mirrorDisplay');
+
+            if (!fileInput.files[0] || !garmentID) {
+                showToast("⚠️ Missing Image or Garment ID", true);
+                return;
+            }
+
+            try {
+                // UI State: Loading
+                btn.disabled = true;
+                btn.innerHTML = "PROCESSING...";
+                loader.classList.add('show');
+
+                // 1. Prepare Payload
+                const base64Image = await getBase64(fileInput.files[0]);
+
+                // 2. Call API
+                const response = await fetch('http://localhost:5000/api/tryon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userImage: base64Image,
+                        garmentID: garmentID,
+                        category: "Upper-body"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast("✨ Try-On Successful!");
+                    // Smooth transition
+                    mirror.style.opacity = '0';
+                    setTimeout(() => {
+                        mirror.src = data.resultImageUrl;
+                        mirror.style.opacity = '1';
+                    }, 500);
+                } else {
+                    throw new Error(data.error || "Unknown server error");
+                }
+
+            } catch (err) {
+                console.error(err);
+                showToast(`❌ Error: ${err.message}`, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "INITIATE TRY-ON";
+                loader.classList.remove('show');
+            }
+        }
+    </script>
+</body>
+
+</html>

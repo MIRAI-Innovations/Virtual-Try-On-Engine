@@ -1,0 +1,26 @@
+{
+  "name": "model",
+  "version": "1.0.0",
+  "description": "An intelligent, automated virtual try-on system that combines AI-powered garment visualization with automated feature extraction and multi-provider failover for robust, real-time fashion recommendations.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MIRAI-Innovations/Virtual-Try-On-Engine.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MIRAI-Innovations/Virtual-Try-On-Engine/issues"
+  },
+  "homepage": "https://github.com/MIRAI-Innovations/Virtual-Try-On-Engine#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1"
+  }
+}

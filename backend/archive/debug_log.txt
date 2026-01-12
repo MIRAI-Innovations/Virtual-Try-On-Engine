@@ -1,0 +1,15 @@
+=== Starting MIRAI Trial Runner ===
+Subject: C:\Users\dhaks\OneDrive\Documents\MIRAI\model\my photos\IMG_1337.jpg
+Selected Cloth: 03390_00.jpg
+
+--- Running Feature Scanner ---
+Warning: mediapipe.solutions not found. Feature extraction disabled.
+Detected Features: {'Body Shape': 'Unknown', 'Face Shape': 'Unknown', 'Skin Tone': 'Unknown'}
+
+--- Running Virtual Try-On ---
+Trying to connect to levihsu/OOTDiffusion...
+Loaded as API: https://levihsu-ootdiffusion.hf.space
+Successfully connected to levihsu/OOTDiffusion!
+  Attempting prediction with levihsu/OOTDiffusion (ootd)...
+  Error during prediction with levihsu/OOTDiffusion: Parameter `category` is not a valid key-word argument. Please click on 'view API' in the footer of the Gradio app to see usage.
+VTON Failed. Aborting save.

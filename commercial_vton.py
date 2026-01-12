@@ -5,7 +5,7 @@ import requests
 import time
 
 # --- CONFIGURATION ---
-API_KEY = os.getenv("SEGMIND_API_KEY")
+API_KEY = "SG_6ffff570b1d4ca6c"
 
 # Endpoints
 VTON_URL = "https://api.segmind.com/v1/segfit-v1.3"
@@ -23,7 +23,7 @@ def encode_image_to_base64(image_path, max_size=1024):
         ratio = max_size / max(img.size)
         new_size = tuple(int(dim * ratio) for dim in img.size)
         img = img.resize(new_size, Image.Resampling.LANCZOS)
-        print(f"      Resized: {Image.open(image_path).size} → {new_size}")
+        print(f"      Resized: {Image.open(image_path).size} -> {new_size}")
     
     # Convert to bytes
     img_byte_arr = io.BytesIO()
@@ -34,26 +34,31 @@ def encode_image_to_base64(image_path, max_size=1024):
     encoded_string = base64.b64encode(img_byte_arr).decode('utf-8')
     return encoded_string
 
-def run_segmind_vton(person_path, cloth_path, output_path="result.jpg"):
+def run_segmind_vton(person_path, cloth_path, output_path="result.jpg", category="upper_body"):
     if not API_KEY:
-        print("❌ Error: SEGMIND_API_KEY not found. Run 'export SEGMIND_API_KEY=SG_...'")
+        print("X Error: SEGMIND_API_KEY not found. Run 'export SEGMIND_API_KEY=SG_...'")
         return False
 
-    print("🚀 Starting Commercial VTON (Segmind SegFit v1.3)...")
+    print("Starting Commercial VTON (Segmind SegFit v1.3)...")
     
     # 1. Encode images to base64
-    print(f"   📸 Encoding {os.path.basename(person_path)}...")
+    print(f"   Encoding {os.path.basename(person_path)}...")
     person_b64 = encode_image_to_base64(person_path)
     
-    print(f"   📸 Encoding {os.path.basename(cloth_path)}...")
+    print(f"   Encoding {os.path.basename(cloth_path)}...")
     cloth_b64 = encode_image_to_base64(cloth_path)
 
+    # Map category names if needed
+    segmind_category = category.lower().replace("-", "_")
+    if segmind_category not in ["upper_body", "lower_body", "dress"]:
+        segmind_category = "upper_body"
+
     # 2. Call VTON API with base64 images directly
-    print("   ✨ Generating Try-On...")
+    print(f"   Generating Try-On (Category: {segmind_category})...")
     payload = {
         "model_image": person_b64,
         "outfit_image": cloth_b64,
-        "category": "upper_body",  # Options: upper_body, lower_body, dress
+        "category": segmind_category,  # Options: upper_body, lower_body, dress
         "base64": False  # Return binary image
     }
     
@@ -74,7 +79,7 @@ def run_segmind_vton(person_path, cloth_path, output_path="result.jpg"):
                 # Binary image response
                 with open(output_path, 'wb') as f:
                     f.write(response.content)
-                print(f"✅ Success! Saved to: {os.path.abspath(output_path)}")
+                print(f"Success! Saved to: {os.path.abspath(output_path)}")
                 return True
             else:
                 # Try JSON response
@@ -85,14 +90,14 @@ def run_segmind_vton(person_path, cloth_path, output_path="result.jpg"):
                         img_data = base64.b64decode(data['image'])
                         with open(output_path, 'wb') as f:
                             f.write(img_data)
-                        print(f"✅ Success! Saved to: {os.path.abspath(output_path)}")
+                        print(f"Success! Saved to: {os.path.abspath(output_path)}")
                         return True
                     elif 'output' in data:
                         # URL to download
                         img_resp = requests.get(data['output'])
                         with open(output_path, 'wb') as f:
                             f.write(img_resp.content)
-                        print(f"✅ Success! Saved to: {os.path.abspath(output_path)}")
+                        print(f"Success! Saved to: {os.path.abspath(output_path)}")
                         return True
                 except:
                     pass
@@ -100,17 +105,17 @@ def run_segmind_vton(person_path, cloth_path, output_path="result.jpg"):
                 # Fallback: save raw content
                 with open(output_path, 'wb') as f:
                     f.write(response.content)
-                print(f"✅ Saved response to: {os.path.abspath(output_path)}")
+                print(f"Saved response to: {os.path.abspath(output_path)}")
                 return True
         else:
-            print(f"❌ VTON Failed (Status {response.status_code}): {response.text}")
+            print(f"VTON Failed (Status {response.status_code}): {response.text}")
             return False
 
     except requests.exceptions.Timeout:
-        print("❌ Request timed out. The API might be processing - try again in a moment.")
+        print("Request timed out. The API might be processing - try again in a moment.")
         return False
     except Exception as e:
-        print(f"❌ Execution Error: {e}")
+        print(f"Execution Error: {e}")
         return False
 
 if __name__ == "__main__":
@@ -123,11 +128,11 @@ if __name__ == "__main__":
     
     # Validate inputs
     if not os.path.exists(args.person):
-        print(f"❌ Error: Person image not found: {args.person}")
+        print(f"Error: Person image not found: {args.person}")
         exit(1)
     
     if not os.path.exists(args.cloth):
-        print(f"❌ Error: Cloth image not found: {args.cloth}")
+        print(f"Error: Cloth image not found: {args.cloth}")
         exit(1)
     
     success = run_segmind_vton(args.person, args.cloth, args.output)

@@ -15,6 +15,11 @@ try:
 except ImportError:
     detect_metadata = None
 
+try:
+    from commercial_vton import run_segmind_vton
+except ImportError:
+    run_segmind_vton = None
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
@@ -367,7 +372,10 @@ def smart_resize(image_path, target_size=(768, 1024)):
 def main():
     parser = argparse.ArgumentParser(description="Run MIRAI Virtual Try-On Trial")
     parser.add_argument("--image", default=DEFAULT_SUBJECT_IMAGE_PATH, help="Path to the subject image")
+    parser.add_argument("--source", dest="image", help="Alias for --image (for API usage)")
     parser.add_argument("--cloth", default=None, help="Path to specific cloth image (optional)")
+    parser.add_argument("--garment", dest="cloth", help="Alias for --cloth (for API usage)")
+    parser.add_argument("--provider", default="gradio", choices=["gradio", "segmind"], help="VTON Provider: 'gradio' (Free/Spaces) or 'segmind' (Paid API)")
     parser.add_argument("--category", default="Upper-body", choices=["Upper-body", "Lower-body", "Dress"], help="Garment category (Upper-body, Lower-body, Dress)")
     parser.add_argument("--steps", type=int, default=30, help="Inference steps (Quality). Default 30.")
     parser.add_argument("--scale", type=float, default=2.5, help="Guidance scale (Adherence). Default 2.5.")
@@ -380,6 +388,7 @@ def main():
     parser.add_argument("--height", default="170 cm", help="User Height (Default: 170 cm)")
     
     args = parser.parse_args()
+    print(f"DEBUG: Arguments received: {args}")
 
     subject_image_path = args.image
     
@@ -457,19 +466,42 @@ def main():
 
     # 5. Run VTON
     print("\n--- Running Virtual Try-On ---")
-    # Use the processed path for VTON!
-    result_path = run_vton_trial(
-        processed_subject_path, 
-        selected_cloth_path, 
-        category=args.category,
-        steps=args.steps,
-        scale=args.scale,
-        seed=args.seed,
-        hf_token=args.token
-    )
+    
+    result_path = None
+    
+    if args.provider == "segmind":
+        if not run_segmind_vton:
+             print("Error: segmind provider requested but commercial_vton module not found.")
+        else:
+            # Segmind Integration
+            print(f"Using Paid API (Segmind)...")
+            temp_output = os.path.join(TEMP_DIR, f"segfit_{random.randint(1000,9999)}.jpg")
+            success = run_segmind_vton(processed_subject_path, selected_cloth_path, temp_output, category=args.category)
+            if success:
+                result_path = temp_output
+            else:
+                print("Segmind API failed.")
+                
+    else:
+        # Default Gradio/Spaces logic
+        result_path = run_vton_trial(
+            processed_subject_path, 
+            selected_cloth_path, 
+            category=args.category,
+            steps=args.steps,
+            scale=args.scale,
+            seed=args.seed,
+            hf_token=args.token
+        )
     
     if not result_path:
         print("VTON Failed. Aborting save.")
+        import json
+        output_info = {
+            "success": False,
+            "error": "VTON Execution Failed - Check logs for details (likely API or model issue)"
+        }
+        print(f"__MIRAI_OUTPUT__{json.dumps(output_info)}")
         return
 
     # 6. Save Session
@@ -528,6 +560,16 @@ def main():
     df.to_csv(csv_path, index=False)
     
     print(f"Trial {next_trial_num} saved successfully at {session_dir}")
+    
+    # Machine-readable output for Node.js server
+    import json
+    output_info = {
+        "success": True,
+        "trial_id": next_trial_num,
+        "result_path": os.path.abspath(dest_result),
+        "session_dir": os.path.abspath(session_dir)
+    }
+    print(f"__MIRAI_OUTPUT__{json.dumps(output_info)}")
 
 if __name__ == "__main__":
     main()

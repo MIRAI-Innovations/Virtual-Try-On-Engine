@@ -2,7 +2,11 @@
 
 This project depends on the following Python libraries. Run the command below to install all of them.
 
-## Installation Command
+## System Requirements
+1.  **Python 3.10+**: For the VTON Engine.
+2.  **Node.js & npm**: For the API Server. [Download here](https://nodejs.org/)
+
+## Python Installation Command
 ```bash
 pip install mediapipe gradio_client pandas opencv-python pillow requests
 ```

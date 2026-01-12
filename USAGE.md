@@ -30,5 +30,21 @@ python main.py --mode local --image "my photos/IMG_1522.jpg" --cloth "datasets/t
 -   `--gender Female`: Override gender detection
 -   `--age 25`: Override age detection
 
+## 3. Node.js API Server
+Runs the system as a backend API for web/mobile apps.
+
+**Prerequisites:** Node.js installed.
+
+**Setup:**
+```bash
+npm install express cors
+```
+
+**Run Server:**
+```bash
+node server.js
+```
+The server will start on `http://localhost:5000`. You can POST images to `/api/tryon`.
+
 ## OUTPUT
 Results are saved in the `Mirror_Sessions/Trial_X` folder.
